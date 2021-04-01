@@ -1,0 +1,16 @@
+*.iml
+Android/.gradle
+Android/local.properties
+Android/.idea/*
+Android/build
+Android/captures
+Android/app/google-services.json
+
+.vscode/
+.DS_Store
+
+
+Backend/node_modules
+Backend/.env
+Backend/ormconfig.json
+Backend/dist
