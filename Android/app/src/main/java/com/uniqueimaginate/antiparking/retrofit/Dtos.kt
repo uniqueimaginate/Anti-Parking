@@ -1,4 +1,4 @@
-package com.uniqueimaginate.antiparking
+package com.uniqueimaginate.antiparking.retrofit
 
 data class ResultCar(
         var uid: Int,

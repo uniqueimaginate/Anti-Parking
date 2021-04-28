@@ -8,7 +8,6 @@ import android.util.Log
 import android.util.Size
 import android.view.*
 import android.view.animation.AnimationUtils
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -20,6 +19,9 @@ import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.uniqueimaginate.antiparking.databinding.ActivityMainBinding
+import com.uniqueimaginate.antiparking.retrofit.AddCar
+import com.uniqueimaginate.antiparking.retrofit.AntiParkingService
+import com.uniqueimaginate.antiparking.retrofit.ResultCar
 import kotlinx.android.synthetic.main.activity_main.view.*
 import org.json.JSONObject
 import retrofit2.Call
@@ -33,17 +35,13 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
     var holder: SurfaceHolder? = null
-    var surfaceView: SurfaceView? = null
     var canvas: Canvas? = null
-    var paint: Paint? = null
-    var xOffset = 0
-    var yOffset = 0
     var boxWidth = 0
     var boxHeight = 0
     private var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>? = null
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var retrofit: Retrofit
-    private lateinit var service: AntiparkingService
+    private lateinit var service: AntiParkingService
     private lateinit var binding: ActivityMainBinding
 
 
@@ -97,24 +95,15 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
             val mediaImage = image.image
             val images = FirebaseVisionImage.fromMediaImage(mediaImage!!, rotationDegrees)
             val bmp = images.bitmap
-            val displayMetrics = DisplayMetrics()
-            windowManager.defaultDisplay.getMetrics(displayMetrics)
             val height = bmp.height
             val width = bmp.width
-            val left: Int
-            val top: Int
-            var diameter: Int
-            diameter = width
-            if (height < width) {
-                diameter = height
-            }
+
+            var diameter: Int = if (height < width) height else width
+            val left: Int = width / 2 - diameter / 3
+            val top: Int = height / 2 - diameter / 6
             val offset = (0.05 * diameter).toInt()
             diameter -= offset
-            left = width / 2 - diameter / 3
-            top = height / 2 - diameter / 6
 
-            xOffset = left
-            yOffset = top
 
             val bitmap = Bitmap.createBitmap(bmp, left, top, boxWidth, boxHeight)
             val detector = FirebaseVision.getInstance().cloudTextRecognizer
@@ -146,9 +135,7 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
         val listener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
                 val currentZoomRatio: Float = camera.cameraInfo.zoomState.value?.zoomRatio ?: 1F
-
                 val delta = detector.scaleFactor
-
                 camera.cameraControl.setZoomRatio(currentZoomRatio * delta)
                 return true
             }
@@ -171,70 +158,61 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
         startCamera()
         retrofit = Retrofit.Builder().baseUrl(getString(R.string.server_url))
             .addConverterFactory(GsonConverterFactory.create()).build()
-        service = retrofit.create(AntiparkingService::class.java)
+        service = retrofit.create(AntiParkingService::class.java)
 
-        binding.overlay.setZOrderOnTop(true)
-        binding.checkButton.setOnClickListener {
-            if (binding.recognizedText.text.toString() == "") {
-                changeResultText(0, getString(R.string.no_input))
-            } else {
-                getOneCar(binding.recognizedText.text.toString())
-                changeResultText(1)
+        binding.apply {
+            overlay.setZOrderOnTop(true)
+            checkButton.setOnClickListener {
+                if (binding.recognizedText.text.toString() == "") {
+                    changeResultText(0, getString(R.string.no_input))
+                } else {
+                    getOneCar(binding.recognizedText.text.toString())
+                    changeResultText(1)
+                }
             }
-        }
-        binding.addButton.setOnClickListener {
-            if (binding.recognizedText.text.toString() == "") {
-                changeResultText(0, getString(R.string.no_input))
-            } else {
-                addCar(binding.recognizedText.text.toString())
-                changeResultText(1)
+            addButton.setOnClickListener {
+                if (binding.recognizedText.text.toString() == "") {
+                    changeResultText(0, getString(R.string.no_input))
+                } else {
+                    addCar(binding.recognizedText.text.toString())
+                    changeResultText(1)
+                }
             }
-
+            text.setOnClickListener { view ->
+                val regex = "[^0-9가-힣]".toRegex()
+                val diffText = regex.replace(view.text.text, "")
+                binding.recognizedText.setText(diffText)
+            }
+            holder = overlay.holder
         }
-        binding.text.setOnClickListener { view ->
-            val regex = "[^0-9가-힣]".toRegex()
-            val diffText = regex.replace(view.text.text, "")
-            binding.recognizedText.setText(diffText)
-        }
 
-        holder = surfaceView?.holder
         holder?.setFormat(PixelFormat.TRANSPARENT)
         holder?.addCallback(this)
     }
 
 
     private fun drawFocusRect(color: Int) {
-        val displayMetrics = DisplayMetrics()
-        windowManager.defaultDisplay.getMetrics(displayMetrics)
         val height = binding.previewView.height
         val width = binding.previewView.width
-
-        val left: Int
-        val right: Int
-        val top: Int
-        val bottom: Int
-        var diameter: Int
-        diameter = width
-        if (height < width) {
-            diameter = height
-        }
+        var diameter: Int = if (height < width) height else width
         val offset = (0.05 * diameter).toInt()
         diameter -= offset
         canvas = holder!!.lockCanvas()
         canvas?.drawColor(0, PorterDuff.Mode.CLEAR)
-        paint = Paint()
-        paint!!.style = Paint.Style.STROKE
-        paint!!.color = color
-        paint!!.strokeWidth = 5f
-        left = width / 2 - diameter / 3
-        top = height / 2 - diameter / 10
-        right = width / 2 + diameter / 3
-        bottom = height / 2 + diameter / 10
-        xOffset = left
-        yOffset = top
+        val paint = Paint().apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 5f
+            this.color = color
+        }
+
+        val left: Int = width / 2 - diameter / 3
+        val right: Int = height / 2 - diameter / 10
+        val top: Int = width / 2 + diameter / 3
+        val bottom: Int = height / 2 + diameter / 10
+
         boxHeight = bottom - top
         boxWidth = right - left
-        canvas?.drawRect(left.toFloat(), top.toFloat(), right.toFloat(), bottom.toFloat(), paint!!)
+        canvas?.drawRect(left.toFloat(), top.toFloat(), right.toFloat(), bottom.toFloat(), paint)
         holder!!.unlockCanvasAndPost(canvas)
     }
 
@@ -249,7 +227,6 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
                         changeResultText(5, carPlate)
                     }
                 }
-
             }
 
             override fun onFailure(call: Call<ResultCar>, t: Throwable) {
@@ -273,7 +250,6 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
                         changeResultText(3)
                     }
                 }
-
             }
 
             override fun onFailure(call: Call<AddCar>, t: Throwable) {
@@ -330,7 +306,7 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
     override fun surfaceCreated(holder: SurfaceHolder) {}
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        drawFocusRect(Color.parseColor("#b3dabb"))
+        drawFocusRect(R.color.green_box)
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {}
