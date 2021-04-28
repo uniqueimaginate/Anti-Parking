@@ -8,19 +8,18 @@ import android.util.Log
 import android.util.Size
 import android.view.*
 import android.view.animation.AnimationUtils
-import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.LifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
+import com.uniqueimaginate.antiparking.databinding.ActivityMainBinding
 import kotlinx.android.synthetic.main.activity_main.view.*
 import org.json.JSONObject
 import retrofit2.Call
@@ -45,12 +44,8 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var retrofit: Retrofit
     private lateinit var service: AntiparkingService
-    private lateinit var checkButton: Button
-    private lateinit var addButton: Button
-    private lateinit var resultText: TextView
-    private lateinit var textView: TextView
-    private lateinit var checkTextView: TextView
-    private lateinit var mCameraView: PreviewView
+    private lateinit var binding: ActivityMainBinding
+
 
     private fun degreesToFirebaseRotation(degrees: Int): Int {
         return when (degrees) {
@@ -59,12 +54,12 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
             180 -> FirebaseVisionImageMetadata.ROTATION_180
             270 -> FirebaseVisionImageMetadata.ROTATION_270
             else -> throw IllegalArgumentException(
-                    "Rotation must be 0, 90, 180, or 270.")
+                "Rotation must be 0, 90, 180, or 270."
+            )
         }
     }
 
     private fun startCamera() {
-        mCameraView = findViewById(R.id.previewView)
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
         cameraProviderFuture!!.addListener({
@@ -82,18 +77,18 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
     @SuppressLint("UnsafeExperimentalUsageError", "ClickableViewAccessibility")
     private fun bindPreview(cameraProvider: ProcessCameraProvider) {
         val preview = Preview.Builder()
-                .build()
+            .build()
         val cameraSelector = CameraSelector.Builder()
-                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                .build()
+            .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+            .build()
 
-        preview.setSurfaceProvider(mCameraView.surfaceProvider)
+        preview.setSurfaceProvider(binding.previewView.surfaceProvider)
 
 
         val imageAnalysis = ImageAnalysis.Builder()
-                .setTargetResolution(Size(720, 1488))
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
+            .setTargetResolution(Size(720, 1488))
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
         imageAnalysis.setAnalyzer(executor, ImageAnalysis.Analyzer { image ->
             val rotationDegrees = degreesToFirebaseRotation(image.imageInfo.rotationDegrees)
             if (image.image == null) {
@@ -126,22 +121,27 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
 
             detector.processImage(FirebaseVisionImage.fromBitmap(bitmap))
-                    .addOnSuccessListener { firebaseVisionText ->
+                .addOnSuccessListener { firebaseVisionText ->
 
-                        val text = firebaseVisionText.text
-                        val regex = "[^0-9가-힣]".toRegex()
-                        val diffText = regex.replace(text, "")
+                    val text = firebaseVisionText.text
+                    val regex = "[^0-9가-힣]".toRegex()
+                    val diffText = regex.replace(text, "")
 
-                        textView.text = diffText
+                    binding.text.text = diffText
 
-                        image.close()
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e("Error", e.toString())
-                        image.close()
-                    }
+                    image.close()
+                }
+                .addOnFailureListener { e ->
+                    Log.e("Error", e.toString())
+                    image.close()
+                }
         })
-        val camera = cameraProvider.bindToLifecycle((this as LifecycleOwner), cameraSelector, imageAnalysis, preview)
+        val camera = cameraProvider.bindToLifecycle(
+            (this as LifecycleOwner),
+            cameraSelector,
+            imageAnalysis,
+            preview
+        )
 
         val listener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -156,7 +156,7 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
 
         val scaleGestureDetector = ScaleGestureDetector(this, listener)
 
-        mCameraView.setOnTouchListener { _, event ->
+        binding.previewView.setOnTouchListener { _, event ->
             scaleGestureDetector.onTouchEvent(event)
             return@setOnTouchListener true
         }
@@ -165,41 +165,36 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
 
         //Start Camera
         startCamera()
-        retrofit = Retrofit.Builder().baseUrl(getString(R.string.server_url)).addConverterFactory(GsonConverterFactory.create()).build()
+        retrofit = Retrofit.Builder().baseUrl(getString(R.string.server_url))
+            .addConverterFactory(GsonConverterFactory.create()).build()
         service = retrofit.create(AntiparkingService::class.java)
-        checkButton = findViewById(R.id.check_button)
-        addButton = findViewById(R.id.add_button)
-        resultText = findViewById(R.id.result_text)
-        surfaceView = findViewById(R.id.overlay)
-        surfaceView?.setZOrderOnTop(true)
 
-        textView = findViewById(R.id.text)
-        checkTextView = findViewById(R.id.recognized_text)
-        checkButton.setOnClickListener {
-            if (checkTextView.text.toString() == "") {
+        binding.overlay.setZOrderOnTop(true)
+        binding.checkButton.setOnClickListener {
+            if (binding.recognizedText.text.toString() == "") {
                 changeResultText(0, getString(R.string.no_input))
             } else {
-                getOneCar(checkTextView.text.toString())
+                getOneCar(binding.recognizedText.text.toString())
                 changeResultText(1)
             }
         }
-        addButton.setOnClickListener {
-            if (checkTextView.text.toString() == "") {
+        binding.addButton.setOnClickListener {
+            if (binding.recognizedText.text.toString() == "") {
                 changeResultText(0, getString(R.string.no_input))
             } else {
-                addCar(checkTextView.text.toString())
+                addCar(binding.recognizedText.text.toString())
                 changeResultText(1)
             }
 
         }
-        textView.setOnClickListener { view ->
+        binding.text.setOnClickListener { view ->
             val regex = "[^0-9가-힣]".toRegex()
             val diffText = regex.replace(view.text.text, "")
-            checkTextView.text = diffText
+            binding.recognizedText.setText(diffText)
         }
 
         holder = surfaceView?.holder
@@ -211,8 +206,8 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
     private fun drawFocusRect(color: Int) {
         val displayMetrics = DisplayMetrics()
         windowManager.defaultDisplay.getMetrics(displayMetrics)
-        val height = mCameraView.height
-        val width = mCameraView.width
+        val height = binding.previewView.height
+        val width = binding.previewView.width
 
         val left: Int
         val right: Int
@@ -292,44 +287,44 @@ class MainActivity : AppCompatActivity(), SurfaceHolder.Callback {
     private fun changeResultText(input: Int, carPlate: String = "") {
         when (input) {
             1 -> {
-                resultText.text = getString(R.string.connecting)
-                resultText.setTextColor(Color.GRAY)
+                binding.resultText.text = getString(R.string.connecting)
+                binding.resultText.setTextColor(Color.GRAY)
             }
             2 -> {
-                resultText.text = "성공적으로 $carPlate 를 등록했습니다."
-                resultText.setTextColor(Color.GREEN)
+                binding.resultText.text = "성공적으로 $carPlate 를 등록했습니다."
+                binding.resultText.setTextColor(Color.GREEN)
                 shakeAnimation()
-                fadeinAnimation()
+                fadeInAnimation()
             }
             3 -> {
-                resultText.text = getString(R.string.add_failure)
-                resultText.setTextColor(Color.RED)
+                binding.resultText.text = getString(R.string.add_failure)
+                binding.resultText.setTextColor(Color.RED)
                 shakeAnimation()
             }
             4 -> {
-                resultText.text = carPlate + getString(R.string.exist_car_plate)
-                resultText.setTextColor(Color.GREEN)
-                fadeinAnimation()
+                binding.resultText.text = carPlate + getString(R.string.exist_car_plate)
+                binding.resultText.setTextColor(Color.GREEN)
+                fadeInAnimation()
             }
             5 -> {
-                resultText.text = carPlate + getString(R.string.no_car_plate)
-                resultText.setTextColor(Color.RED)
+                binding.resultText.text = carPlate + getString(R.string.no_car_plate)
+                binding.resultText.setTextColor(Color.RED)
                 shakeAnimation()
             }
             else -> {
-                resultText.text = carPlate
-                resultText.setTextColor(Color.RED)
+                binding.resultText.text = carPlate
+                binding.resultText.setTextColor(Color.RED)
                 shakeAnimation()
             }
         }
     }
 
     private fun shakeAnimation() {
-        resultText.startAnimation(AnimationUtils.loadAnimation(this, R.anim.shake))
+        binding.resultText.startAnimation(AnimationUtils.loadAnimation(this, R.anim.shake))
     }
 
-    private fun fadeinAnimation(){
-        resultText.startAnimation(AnimationUtils.loadAnimation(this, R.anim.fadein))
+    private fun fadeInAnimation() {
+        binding.resultText.startAnimation(AnimationUtils.loadAnimation(this, R.anim.fadein))
     }
 
 
