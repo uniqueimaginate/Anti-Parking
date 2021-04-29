@@ -10,4 +10,6 @@
     <string name="exist_car_plate"> 는 등록되어 있는 번호입니다.</string>
     <string name="no_car_plate"> 는 등록되어 있지 않은 번호입니다.</string>
     <string name="no_input">차량번호를 입력해주세요.</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

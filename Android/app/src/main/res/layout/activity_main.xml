@@ -1,113 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        tools:context=".CameraFragment">
 
-        <SurfaceView
-            android:id="@+id/overlay"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+        <fragment
+            android:id="@+id/myNavHostFragment"
+            android:name="androidx.navigation.fragment.NavHostFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:defaultNavHost="true"
+            app:navGraph="@navigation/navigation" />
 
-        <androidx.camera.view.PreviewView
-            android:id="@+id/previewView"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="1.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/overlay"
-            app:layout_constraintVertical_bias="0.0">
+    </LinearLayout>
+    
 
-
-        </androidx.camera.view.PreviewView>
-
-        <TextView
-            android:id="@+id/text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:fontFamily="sans-serif"
-            android:gravity="center_horizontal"
-            android:padding="25dp"
-            android:text="@string/decoded_text"
-            android:textColor="@android:color/white"
-            android:textSize="20sp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="0.75" />
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="300dp"
-            android:layout_height="100dp"
-            android:background="@drawable/rounded_corner"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/text"
-            app:layout_constraintVertical_bias="1.0">
-
-            <EditText
-                android:id="@+id/recognized_text"
-                android:layout_width="200dp"
-                android:layout_height="50dp"
-                android:fontFamily="sans-serif"
-                android:gravity="center"
-                android:hint="@string/touch_recognized_text"
-                android:inputType="text"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:textSize="20sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintVertical_bias="0.13" />
-
-            <Button
-                android:id="@+id/add_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="5dp"
-                android:background="@drawable/ic_baseline_add_circle_24"
-                app:layout_constraintBottom_toBottomOf="@+id/recognized_text"
-                app:layout_constraintEnd_toStartOf="@+id/check_button"
-                app:layout_constraintStart_toEndOf="@+id/recognized_text"
-                app:layout_constraintTop_toTopOf="@+id/recognized_text" />
-
-            <Button
-                android:id="@+id/check_button"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="5dp"
-                android:background="@drawable/ic_outline_search_24"
-                app:layout_constraintBottom_toBottomOf="@+id/add_button"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/add_button" />
-
-
-            <TextView
-                android:id="@+id/result_text"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:text="@string/stand_by"
-                android:textSize="18sp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/recognized_text" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>
