@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 import { Cars } from 'src/entity/cars.entity'
 import { AddCarDto } from 'src/dto/add-car.dto'
 
@@ -32,6 +32,19 @@ export class CarsService {
             const car = this.carsRepository.create(data)
             return await this.carsRepository.save(car)
         } catch(e){
+            throw new BadRequestException()
+        }
+    }
+
+    async deleteOneByPlate(carPlate: string): Promise<DeleteResult>{
+        try{
+            console.log(carPlate)
+            var deleteResult = await this.carsRepository.delete({carPlate})
+            if(!deleteResult){
+                throw new BadRequestException()
+            }
+            return deleteResult
+        }catch{
             throw new BadRequestException()
         }
     }
